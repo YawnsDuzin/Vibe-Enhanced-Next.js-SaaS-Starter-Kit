@@ -244,18 +244,82 @@ npm run db:seed      # 데이터베이스 시딩
 
 ## 배포
 
-### Vercel (권장)
+> 📖 **상세 배포 가이드**: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
 
-1. GitHub에 코드 푸시
-2. Vercel에서 프로젝트 임포트
-3. 환경 변수 추가
-4. 배포!
+### 빠른 배포 (Vercel)
 
-### Supabase 프로덕션 설정
+#### 1단계: Supabase 설정
 
-1. Supabase 대시보드에서 프로덕션 프로젝트 생성
-2. 환경 변수 업데이트
-3. OAuth 콜백 URL 업데이트
+```bash
+# 1. Supabase 프로젝트 생성 후
+# 2. SQL Editor에서 스키마 실행
+# supabase/migrations/00001_initial_schema.sql
+
+# 3. API 키 확인 (Project Settings → API)
+```
+
+#### 2단계: Stripe 설정
+
+```bash
+# 1. Stripe 대시보드에서 상품/가격 생성
+# 2. Webhook 설정 (Endpoint: https://your-domain.vercel.app/api/webhooks/stripe)
+# 3. Customer Portal 활성화
+```
+
+#### 3단계: Vercel 배포
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-repo/vibe-saas-starter)
+
+또는 수동으로:
+
+```bash
+# Vercel CLI 설치
+npm i -g vercel
+
+# 배포
+vercel --prod
+```
+
+#### 4단계: 환경 변수 설정
+
+Vercel 대시보드 → Project Settings → Environment Variables:
+
+| 변수명 | 필수 | 설명 |
+|--------|------|------|
+| `NEXT_PUBLIC_APP_URL` | ✅ | 배포된 앱 URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key |
+| `STRIPE_SECRET_KEY` | ✅ | Stripe Secret Key |
+| `STRIPE_PUBLISHABLE_KEY` | ✅ | Stripe Publishable Key |
+| `STRIPE_WEBHOOK_SECRET` | ✅ | Stripe Webhook Secret |
+| `STRIPE_PRICE_ID_STARTER` | ✅ | Starter 플랜 Price ID |
+| `STRIPE_PRICE_ID_PRO` | ✅ | Pro 플랜 Price ID |
+| `STRIPE_PRICE_ID_ENTERPRISE` | ✅ | Enterprise 플랜 Price ID |
+| `OPENAI_API_KEY` | ❌ | OpenAI API 키 (AI 기능용) |
+
+#### 5단계: 배포 후 설정
+
+```bash
+# 1. Supabase Site URL 업데이트
+#    Authentication → URL Configuration → Site URL
+
+# 2. Supabase Redirect URLs 추가
+#    https://your-domain.vercel.app/**
+
+# 3. OAuth Provider Callback URL 업데이트 (사용시)
+```
+
+### 배포 체크리스트
+
+- [ ] Supabase 프로젝트 생성 및 스키마 적용
+- [ ] Supabase OAuth 설정 (Google, GitHub)
+- [ ] Stripe 상품/가격 생성
+- [ ] Stripe Webhook 설정
+- [ ] Vercel 환경 변수 설정
+- [ ] Supabase URL 설정 업데이트
+- [ ] 테스트 결제 진행
+- [ ] 관리자 계정 설정
 
 ## 페이지 구성
 
