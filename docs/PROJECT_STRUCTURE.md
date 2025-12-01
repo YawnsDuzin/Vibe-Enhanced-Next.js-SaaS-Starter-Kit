@@ -75,7 +75,7 @@ Next.js 14 App Router 구조를 사용합니다. 괄호 `()`는 URL에 영향을
 (auth)/
 ├── layout.tsx      # 인증 페이지 공통 레이아웃 (로그인 상태 체크)
 ├── login/
-│   └── page.tsx    # 로그인 페이지 - OAuth(Google/카카오/네이버) + 이메일 로그인
+│   └── page.tsx    # 로그인 페이지 - OAuth(Google/카카오) + 이메일 로그인
 └── register/
     └── page.tsx    # 회원가입 페이지 - OAuth + 이메일 회원가입
 ```
@@ -105,10 +105,6 @@ Next.js 14 App Router 구조를 사용합니다. 괄호 `()`는 URL에 영향을
 
 ```
 api/
-├── auth/
-│   └── naver/
-│       ├── route.ts           # 네이버 OAuth 시작
-│       └── callback/route.ts  # 네이버 OAuth 콜백
 ├── billing/
 │   ├── checkout/route.ts      # 결제 세션 생성 (Stripe/토스)
 │   ├── portal/route.ts        # Stripe Customer Portal

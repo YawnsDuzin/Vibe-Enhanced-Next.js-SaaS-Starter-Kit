@@ -71,15 +71,6 @@ const KakaoIcon = () => (
   </svg>
 );
 
-const NaverIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24">
-    <path
-      fill="#FFFFFF"
-      d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"
-    />
-  </svg>
-);
-
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -151,12 +142,6 @@ export default function RegisterPage() {
     }
   };
 
-  const handleNaverSignIn = () => {
-    setLoadingProvider('naver');
-    // Redirect to our Naver OAuth API route
-    window.location.href = `/api/auth/naver?next=/dashboard`;
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
@@ -207,24 +192,6 @@ export default function RegisterPage() {
                 <span className="flex items-center gap-2">
                   <KakaoIcon />
                   카카오로 계속하기
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full h-11 bg-[#03C75A] hover:bg-[#02b351] text-white border-[#03C75A] hover:border-[#02b351]"
-              onClick={handleNaverSignIn}
-              disabled={loadingProvider !== null || isLoading}
-            >
-              {loadingProvider === 'naver' ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  연결 중...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <NaverIcon />
-                  네이버로 계속하기
                 </span>
               )}
             </Button>

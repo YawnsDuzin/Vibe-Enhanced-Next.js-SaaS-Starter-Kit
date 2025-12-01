@@ -16,7 +16,6 @@
 - **한국 맞춤형 OAuth 제공자**
   - Google 로그인
   - 카카오 로그인
-  - 네이버 로그인
 - 이메일/비밀번호 인증
 - 보호된 라우트 및 미들웨어
 - 자동 세션 갱신
@@ -306,11 +305,9 @@ Vercel 대시보드 → Project Settings → Environment Variables:
 | `TOSS_CLIENT_KEY` | ⚠️ | 토스페이먼츠 Client Key (한국 결제) |
 | `TOSS_SECRET_KEY` | ⚠️ | 토스페이먼츠 Secret Key |
 | `TOSS_WEBHOOK_SECRET` | ⚠️ | 토스페이먼츠 Webhook Secret |
-| `NAVER_CLIENT_ID` | ⚠️ | 네이버 로그인 Client ID |
-| `NAVER_CLIENT_SECRET` | ⚠️ | 네이버 로그인 Client Secret |
 | `OPENAI_API_KEY` | ❌ | OpenAI API 키 (AI 기능용) |
 
-> ⚠️ 한국 사용자를 위해 토스페이먼츠, 네이버 로그인 키가 필요합니다.
+> ⚠️ 한국 사용자를 위해 토스페이먼츠 키가 필요합니다.
 
 #### 5단계: 배포 후 설정
 
@@ -332,7 +329,6 @@ Vercel 대시보드 → Project Settings → Environment Variables:
 - [ ] OAuth 소셜 로그인 설정
   - [ ] Google: Supabase → Authentication → Providers → Google 활성화
   - [ ] 카카오: Supabase → Authentication → Providers → Kakao 활성화
-  - [ ] 네이버: 네이버 개발자센터에서 앱 등록 후 환경변수 설정
 - [ ] Stripe 상품/가격 생성 (해외 결제)
 - [ ] Stripe Webhook 설정 (`/api/webhooks/stripe`)
 - [ ] 토스페이먼츠 설정 (한국 결제)

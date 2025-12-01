@@ -28,7 +28,6 @@
 ### OAuth 제공자 계정 (소셜 로그인용)
 - [Google Cloud Console](https://console.cloud.google.com/)
 - [Kakao Developers](https://developers.kakao.com/)
-- [네이버 개발자센터](https://developers.naver.com/)
 
 ---
 
@@ -79,7 +78,7 @@
 
 ## OAuth 소셜 로그인 설정
 
-이 스타터 킷은 **Google, 카카오, 네이버** 소셜 로그인을 지원합니다.
+이 스타터 킷은 **Google, 카카오** 소셜 로그인을 지원합니다.
 
 ### Google 로그인
 
@@ -128,37 +127,6 @@
 2. **Enable Kakao** 활성화
 3. **REST API 키** → Client ID에 입력
 4. **Client Secret** 입력 후 저장
-
----
-
-### 네이버 로그인
-
-> ⚠️ Supabase에서 네이버를 기본 지원하지 않아 **커스텀 구현**되어 있습니다.
-
-#### 1. 네이버 개발자센터 설정
-
-1. [네이버 개발자센터](https://developers.naver.com/) 접속
-2. **Application** → **애플리케이션 등록**
-3. 애플리케이션 정보 입력:
-   - **애플리케이션 이름**: 앱 이름
-   - **사용 API**: 네이버 로그인 선택
-4. **제공 정보 선택**:
-   - 필수: 회원이름, 이메일주소
-   - 추가: 프로필 사진, 별명
-5. **환경 추가**: PC웹
-6. **서비스 URL**: `https://your-vercel-domain.vercel.app`
-7. **네이버 로그인 Callback URL**:
-   ```
-   https://your-vercel-domain.vercel.app/api/auth/naver/callback
-   ```
-8. 등록 완료 후 **Client ID**와 **Client Secret** 확인
-
-#### 2. 환경 변수 설정
-
-```env
-NAVER_CLIENT_ID="발급받은 Client ID"
-NAVER_CLIENT_SECRET="발급받은 Client Secret"
-```
 
 ---
 
@@ -328,8 +296,6 @@ Vercel 대시보드 → **Project Settings** → **Environment Variables**에서
 | `TOSS_CLIENT_KEY` | 토스페이먼츠 Client Key | `test_ck_...` |
 | `TOSS_SECRET_KEY` | 토스페이먼츠 Secret Key | `test_sk_...` |
 | `TOSS_WEBHOOK_SECRET` | 토스페이먼츠 Webhook Secret | `...` |
-| `NAVER_CLIENT_ID` | 네이버 로그인 Client ID | `...` |
-| `NAVER_CLIENT_SECRET` | 네이버 로그인 Client Secret | `...` |
 
 ### 선택 변수
 
@@ -347,7 +313,7 @@ Vercel 대시보드 → **Project Settings** → **Environment Variables**에서
 - ✅ **Preview** - PR 프리뷰 환경
 - ✅ **Development** - 개발 환경
 
-> ⚠️ **주의**: `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `TOSS_SECRET_KEY`, `NAVER_CLIENT_SECRET`은 민감한 정보입니다. 클라이언트에 노출되지 않도록 주의하세요.
+> ⚠️ **주의**: `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `TOSS_SECRET_KEY`는 민감한 정보입니다. 클라이언트에 노출되지 않도록 주의하세요.
 
 ---
 
@@ -378,13 +344,6 @@ Vercel 대시보드 → **Project Settings** → **Environment Variables**에서
 2. Endpoint URL을 Vercel 도메인으로 업데이트
 
 ### 4. OAuth Callback URL 업데이트
-
-#### 네이버
-1. 네이버 개발자센터 → 애플리케이션 설정
-2. Callback URL을 배포 도메인으로 업데이트:
-   ```
-   https://your-domain.com/api/auth/naver/callback
-   ```
 
 #### 카카오
 1. Kakao Developers → 애플리케이션 → 플랫폼
@@ -442,15 +401,6 @@ npm run type-check
 2. OAuth Provider Callback URL 확인
 3. URL에 후행 슬래시(/) 일관성 확인
 
-**증상**: 네이버 로그인 실패
-
-1. `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` 환경 변수 확인
-2. 네이버 개발자센터에서 Callback URL 확인:
-   ```
-   https://your-domain.com/api/auth/naver/callback
-   ```
-3. 네이버 앱 상태가 '서비스 적용' 상태인지 확인
-
 ### 결제 오류
 
 **증상**: Stripe 결제 후 구독 상태 미반영
@@ -491,7 +441,6 @@ npm run type-check
 ### OAuth 소셜 로그인
 - [ ] Google 로그인 설정 (Supabase)
 - [ ] 카카오 로그인 설정 (Supabase)
-- [ ] 네이버 로그인 설정 (환경변수)
 
 ### 결제 시스템
 - [ ] Stripe 상품/가격 생성
@@ -507,7 +456,6 @@ npm run type-check
 ### 테스트
 - [ ] Google 로그인 테스트
 - [ ] 카카오 로그인 테스트
-- [ ] 네이버 로그인 테스트
 - [ ] Stripe 테스트 결제
 - [ ] 토스페이먼츠 테스트 결제
 
@@ -523,8 +471,7 @@ npm run type-check
 
 1. **Stripe**: 테스트 모드 → 라이브 모드 전환
 2. **토스페이먼츠**: 테스트 키 → 라이브 키 전환
-3. **네이버**: 검수 신청 및 승인 (필요시)
-4. **카카오**: 앱 검수 요청 (필요시)
+3. **카카오**: 앱 검수 요청 (필요시)
 
 ---
 
@@ -565,4 +512,3 @@ vercel logs
 4. [Stripe 문서](https://stripe.com/docs)
 5. [토스페이먼츠 문서](https://docs.tosspayments.com/)
 6. [카카오 로그인 문서](https://developers.kakao.com/docs/latest/ko/kakaologin/common)
-7. [네이버 로그인 문서](https://developers.naver.com/docs/login/overview/overview.md)

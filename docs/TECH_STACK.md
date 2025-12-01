@@ -174,7 +174,6 @@ const { error } = await supabase.auth.signInWithOAuth({
 |------|------|
 | Google OAuth | Supabase 기본 지원 |
 | 카카오 OAuth | Supabase 기본 지원 |
-| 네이버 OAuth | 커스텀 구현 (Magic Link 활용) |
 | 이메일/비밀번호 | 기본 인증 |
 | Magic Link | 이메일 링크 인증 |
 

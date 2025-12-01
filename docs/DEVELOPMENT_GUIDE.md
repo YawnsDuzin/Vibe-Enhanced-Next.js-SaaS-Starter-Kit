@@ -70,9 +70,6 @@ STRIPE_PUBLISHABLE_KEY="pk_test_..."
 TOSS_CLIENT_KEY="test_ck_..."
 TOSS_SECRET_KEY="test_sk_..."
 
-# OAuth
-NAVER_CLIENT_ID="..."
-NAVER_CLIENT_SECRET="..."
 ```
 
 ### VS Code 권장 확장
@@ -735,7 +732,7 @@ main          - 프로덕션 배포
 ### Q: 새 OAuth 제공자를 추가하려면?
 
 1. Supabase에서 지원하는 경우: Dashboard → Authentication → Providers에서 활성화
-2. 미지원 제공자: 네이버 OAuth 구현 참고 (`/api/auth/naver/`)
+2. 미지원 제공자의 경우 커스텀 OAuth 라우트 구현 필요
 
 ### Q: 새 결제 수단을 추가하려면?
 
