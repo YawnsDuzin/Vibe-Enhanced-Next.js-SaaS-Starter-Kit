@@ -1,23 +1,27 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { createCustomerPortalSession } from '@/lib/stripe';
 import { absoluteUrl } from '@/lib/utils';
 
 export async function POST() {
   try {
-    const session = await auth();
+    const user = await getUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's subscription with Stripe customer ID
-    const subscription = await db.subscription.findFirst({
-      where: { userId: session.user.id },
-    });
+    const supabase = await createClient();
 
-    if (!subscription?.stripeCustomerId) {
+    // Get user's subscription with Stripe customer ID
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!subscription?.stripe_customer_id) {
       return NextResponse.json(
         { error: 'No billing account found. Please subscribe to a plan first.' },
         { status: 400 }
@@ -26,7 +30,7 @@ export async function POST() {
 
     // Create customer portal session
     const portalSession = await createCustomerPortalSession({
-      customerId: subscription.stripeCustomerId,
+      customerId: subscription.stripe_customer_id,
       returnUrl: absoluteUrl('/dashboard/billing'),
     });
 

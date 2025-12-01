@@ -1,37 +1,39 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).optional(),
-  image: z.string().url().optional(),
+  avatar_url: z.string().url().optional(),
 });
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    const supabase = await createClient();
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-    if (!user) {
+    if (error || !profile) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json({
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      avatarUrl: profile.avatar_url,
+      role: profile.role,
+      createdAt: profile.created_at,
+    });
   } catch (error) {
     console.error('Failed to fetch profile:', error);
     return NextResponse.json(
@@ -43,27 +45,40 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
     const validatedData = updateProfileSchema.parse(body);
 
-    const user = await db.user.update({
-      where: { id: session.user.id },
-      data: validatedData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-      },
-    });
+    const supabase = await createClient();
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({
+        name: validatedData.name,
+        avatar_url: validatedData.avatar_url,
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
 
-    return NextResponse.json(user);
+    if (error) {
+      console.error('Failed to update profile:', error);
+      return NextResponse.json(
+        { error: 'Failed to update profile' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      avatarUrl: profile.avatar_url,
+      role: profile.role,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

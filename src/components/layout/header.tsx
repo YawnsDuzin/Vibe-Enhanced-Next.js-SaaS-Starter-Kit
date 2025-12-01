@@ -1,8 +1,9 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +16,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { getInitials } from '@/lib/utils';
 import { Moon, Sun, LogOut, Settings, User, Bell, HelpCircle } from 'lucide-react';
+import type { AuthUser } from '@/lib/auth';
 
-export function Header() {
-  const { data: session } = useSession();
+interface HeaderProps {
+  user: AuthUser;
+}
+
+export function Header({ user }: HeaderProps) {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const supabase = createClient();
 
-  const user = session?.user;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
@@ -54,9 +65,9 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar>
-                <AvatarImage src={user?.image || ''} alt={user?.name || ''} />
+                <AvatarImage src={user.avatarUrl || ''} alt={user.name || ''} />
                 <AvatarFallback>
-                  {getInitials(user?.name || user?.email || 'U')}
+                  {getInitials(user.name || user.email || 'U')}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -64,9 +75,9 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.name}</p>
+                <p className="text-sm font-medium leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
+                  {user.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -74,22 +85,22 @@ export function Header() {
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
-                Profile
+                프로필
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings" className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
-                Settings
+                설정
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => signOut({ callbackUrl: '/login' })}
+              onClick={handleSignOut}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Sign out
+              로그아웃
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

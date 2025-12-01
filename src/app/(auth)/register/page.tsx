@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,16 +25,16 @@ import { Sparkles, Github, Mail, User } from 'lucide-react';
 
 const registerSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Please enter a valid email'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    name: z.string().min(2, '이름은 2자 이상이어야 합니다'),
+    email: z.string().email('올바른 이메일을 입력하세요'),
+    password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
     confirmPassword: z.string(),
     terms: z.boolean().refine((val) => val === true, {
-      message: 'You must accept the terms and conditions',
+      message: '이용약관에 동의해주세요',
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: '비밀번호가 일치하지 않습니다',
     path: ['confirmPassword'],
   });
 
@@ -43,6 +43,8 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  const supabase = createClient();
 
   const {
     register,
@@ -62,41 +64,27 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          password: data.password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast.error(result.error || 'Registration failed');
-        return;
-      }
-
-      // Sign in the user after successful registration
-      const signInResult = await signIn('credentials', {
+      const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        redirect: false,
+        options: {
+          data: {
+            name: data.name,
+            full_name: data.name,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
-      if (signInResult?.error) {
-        toast.error('Failed to sign in after registration');
-        router.push('/login');
+      if (error) {
+        toast.error(error.message || '회원가입에 실패했습니다');
         return;
       }
 
-      toast.success('Account created successfully!');
-      router.push('/dashboard');
-      router.refresh();
+      toast.success('회원가입이 완료되었습니다! 이메일을 확인해주세요.');
+      router.push('/login?message=check-email');
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -105,9 +93,19 @@ export default function RegisterPage() {
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     setIsLoading(true);
     try {
-      await signIn(provider, { callbackUrl: '/dashboard' });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || '로그인에 실패했습니다');
+        setIsLoading(false);
+      }
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('오류가 발생했습니다. 다시 시도해주세요.');
       setIsLoading(false);
     }
   };
@@ -121,9 +119,9 @@ export default function RegisterPage() {
               <Sparkles className="h-6 w-6" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Create an account</CardTitle>
+          <CardTitle className="text-2xl">계정 만들기</CardTitle>
           <CardDescription>
-            Get started with your free account
+            무료 계정으로 시작하세요
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -170,7 +168,7 @@ export default function RegisterPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground">
-                Or continue with
+                또는 이메일로 계속
               </span>
             </div>
           </div>
@@ -178,11 +176,11 @@ export default function RegisterPage() {
           {/* Registration Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">이름</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="홍길동"
                 leftIcon={<User className="h-4 w-4" />}
                 error={!!errors.name}
                 {...register('name')}
@@ -192,7 +190,7 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">이메일</Label>
               <Input
                 id="email"
                 type="email"
@@ -206,11 +204,11 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">비밀번호</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a password"
+                placeholder="비밀번호를 입력하세요"
                 error={!!errors.password}
                 {...register('password')}
               />
@@ -221,11 +219,11 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">비밀번호 확인</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm your password"
+                placeholder="비밀번호를 다시 입력하세요"
                 error={!!errors.confirmPassword}
                 {...register('confirmPassword')}
               />
@@ -247,29 +245,29 @@ export default function RegisterPage() {
                 htmlFor="terms"
                 className="text-sm text-muted-foreground cursor-pointer"
               >
-                I agree to the{' '}
                 <Link href="/terms" className="text-primary hover:underline">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
+                  이용약관
                 </Link>
+                {' '}및{' '}
+                <Link href="/privacy" className="text-primary hover:underline">
+                  개인정보처리방침
+                </Link>
+                에 동의합니다
               </label>
             </div>
             {errors.terms && (
               <p className="text-sm text-destructive">{errors.terms.message}</p>
             )}
             <Button type="submit" className="w-full" loading={isLoading}>
-              Create Account
+              회원가입
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            이미 계정이 있으신가요?{' '}
             <Link href="/login" className="text-primary hover:underline">
-              Sign in
+              로그인
             </Link>
           </p>
         </CardFooter>

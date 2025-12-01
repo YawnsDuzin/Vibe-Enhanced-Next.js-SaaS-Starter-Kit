@@ -1,20 +1,22 @@
-# Vibe-Enhanced Next.js SaaS 스타터 킷
+# Vibe-Enhanced Next.js SaaS 스타터 킷 (Supabase)
 
-프로덕션 준비가 완료된, 기능이 풍부한 SaaS 보일러플레이트입니다. Next.js 14, TypeScript, 그리고 최신 모범 사례를 기반으로 구축되었습니다. 몇 달이 아닌 며칠 만에 SaaS 제품을 출시하세요.
+프로덕션 준비가 완료된, 기능이 풍부한 SaaS 보일러플레이트입니다. Next.js 14, TypeScript, Supabase, 그리고 최신 모범 사례를 기반으로 구축되었습니다. 몇 달이 아닌 며칠 만에 SaaS 제품을 출시하세요.
 
 ## 왜 이 스타터 킷인가?
 
 - 신규 SaaS 시작 시 이미 **40% 개발 완료**된 상태로 시작
 - **1인 개발자**에게 필수적인 모든 기능 포함
+- Supabase로 **간편한 백엔드 구성**
 - 검증된 기술 스택과 모범 사례 적용
 
 ## 주요 기능
 
 ### 인증 (Authentication)
-- NextAuth.js v5 기반 이메일/비밀번호 인증
+- Supabase Auth 기반 인증
 - OAuth 제공자 지원 (Google, GitHub)
-- JWT 기반 세션 관리
+- 이메일/비밀번호 인증
 - 보호된 라우트 및 미들웨어
+- 자동 세션 갱신
 
 ### 결제 및 구독 (Billing & Subscriptions)
 - Stripe 완전 통합
@@ -26,7 +28,7 @@
 ### 역할 기반 접근 제어 (RBAC)
 - 사용자 역할 (일반 사용자, 관리자, 슈퍼 관리자)
 - 팀 역할 (뷰어, 멤버, 관리자, 소유자)
-- 권한 기반 접근 제어
+- Row Level Security (RLS) 정책
 - 라우트 보호 미들웨어
 
 ### 팀 관리 (Team Management)
@@ -51,10 +53,10 @@
 
 ### 개발자 경험
 - 전체 TypeScript 적용
-- Prisma ORM + PostgreSQL
+- Supabase + PostgreSQL
+- Row Level Security (RLS)
 - ESLint 설정
 - 모듈형 아키텍처
-- API 라우트 핸들러
 
 ## 기술 스택
 
@@ -64,8 +66,8 @@
 | **언어** | TypeScript |
 | **스타일링** | Tailwind CSS |
 | **UI 컴포넌트** | shadcn/ui + Radix UI |
-| **데이터베이스** | PostgreSQL + Prisma ORM |
-| **인증** | NextAuth.js v5 |
+| **데이터베이스** | Supabase (PostgreSQL) |
+| **인증** | Supabase Auth |
 | **결제** | Stripe |
 | **상태 관리** | Zustand + React Query |
 | **폼** | React Hook Form + Zod |
@@ -77,11 +79,31 @@
 ### 사전 요구사항
 
 - Node.js 18.17 이상
-- PostgreSQL 데이터베이스
+- Supabase 계정 (무료로 시작 가능)
 - Stripe 계정
 - (선택) OpenAI API 키
 
-### 설치
+### Supabase 프로젝트 설정
+
+1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
+
+2. SQL Editor에서 스키마 실행:
+```bash
+# supabase/migrations/00001_initial_schema.sql 파일의 내용을
+# Supabase SQL Editor에 복사하여 실행
+```
+
+3. Supabase 대시보드에서 API 키 확인:
+   - Project Settings → API
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+
+4. OAuth 제공자 설정 (선택):
+   - Authentication → Providers
+   - Google, GitHub 등 활성화
+
+### 로컬 설치
 
 1. 저장소 클론:
 ```bash
@@ -103,13 +125,10 @@ cp .env.example .env.local
 
 4. `.env.local`에서 환경 변수 설정:
 ```env
-# 데이터베이스
-DATABASE_URL="postgresql://..."
-
-# 인증
-AUTH_SECRET="your-secret"
-AUTH_GOOGLE_ID="..."
-AUTH_GOOGLE_SECRET="..."
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # Stripe
 STRIPE_SECRET_KEY="..."
@@ -119,13 +138,7 @@ STRIPE_WEBHOOK_SECRET="..."
 OPENAI_API_KEY="..."
 ```
 
-5. 데이터베이스 설정:
-```bash
-npm run db:push
-npm run db:seed
-```
-
-6. 개발 서버 시작:
+5. 개발 서버 시작:
 ```bash
 npm run dev
 ```
@@ -146,23 +159,52 @@ src/
 │   ├── ui/                # UI 컴포넌트
 │   └── providers.tsx      # 컨텍스트 프로바이더
 ├── lib/
-│   ├── auth.ts            # NextAuth 설정
-│   ├── db.ts              # Prisma 클라이언트
+│   ├── auth.ts            # Supabase Auth 유틸리티
+│   ├── supabase/          # Supabase 클라이언트
+│   │   ├── client.ts      # 브라우저 클라이언트
+│   │   ├── server.ts      # 서버 클라이언트
+│   │   └── middleware.ts  # 미들웨어 클라이언트
 │   ├── rbac.ts            # 역할 기반 접근 제어
 │   ├── stripe.ts          # Stripe 유틸리티
 │   └── utils.ts           # 유틸리티 함수
-└── middleware.ts          # 라우트 보호
+├── types/
+│   └── database.ts        # Supabase 타입 정의
+├── middleware.ts          # 라우트 보호
+└── supabase/
+    └── migrations/        # SQL 마이그레이션
+```
+
+## Supabase 기능 활용
+
+### Row Level Security (RLS)
+
+모든 테이블에 RLS가 적용되어 있습니다:
+- 사용자는 자신의 데이터만 접근 가능
+- 관리자는 모든 데이터 접근 가능
+- 팀 멤버는 팀 데이터 접근 가능
+
+### 자동 트리거
+
+- 사용자 가입 시 자동으로 프로필 생성
+- 사용자 가입 시 무료 구독 자동 생성
+- `updated_at` 자동 갱신
+
+### 타입 안전성
+
+```bash
+# Supabase 타입 생성
+npm run db:types
 ```
 
 ## 주요 기능 상세 설명
 
 ### 인증 플로우
 
-인증 시스템은 다음을 지원합니다:
+Supabase Auth를 사용한 인증:
 - 이메일/비밀번호 회원가입 및 로그인
 - Google 및 GitHub OAuth
-- JWT 토큰 기반 세션 관리
-- 회원가입 시 무료 구독 자동 생성
+- 자동 세션 갱신 (미들웨어)
+- 회원가입 시 프로필 및 무료 구독 자동 생성
 
 ### 구독 관리
 
@@ -183,11 +225,10 @@ src/
 
 ### RBAC 시스템
 
-권한은 `src/lib/rbac.ts`에 정의되어 있습니다:
+권한은 Supabase RLS와 함께 관리됩니다:
 - 전역 역할: USER, ADMIN, SUPER_ADMIN
 - 팀 역할: VIEWER, MEMBER, ADMIN, OWNER
-- 권한 확인 함수
-- 미들웨어 통합
+- 데이터베이스 수준의 보안
 
 ## 사용 가능한 스크립트
 
@@ -197,11 +238,8 @@ npm run build        # 프로덕션 빌드
 npm run start        # 프로덕션 서버 시작
 npm run lint         # ESLint 실행
 npm run type-check   # TypeScript 타입 검사
-npm run db:generate  # Prisma 클라이언트 생성
-npm run db:push      # 스키마를 데이터베이스에 푸시
-npm run db:migrate   # 마이그레이션 실행
+npm run db:types     # Supabase 타입 생성
 npm run db:seed      # 데이터베이스 시딩
-npm run db:studio    # Prisma Studio 열기
 ```
 
 ## 배포
@@ -213,21 +251,11 @@ npm run db:studio    # Prisma Studio 열기
 3. 환경 변수 추가
 4. 배포!
 
-### Docker
+### Supabase 프로덕션 설정
 
-```bash
-docker build -t vibe-saas .
-docker run -p 3000:3000 vibe-saas
-```
-
-## 데모 계정
-
-데이터베이스 시딩 후:
-
-| 역할 | 이메일 | 비밀번호 |
-|------|--------|----------|
-| 관리자 | admin@example.com | admin123 |
-| 데모 사용자 | demo@example.com | demo123 |
+1. Supabase 대시보드에서 프로덕션 프로젝트 생성
+2. 환경 변수 업데이트
+3. OAuth 콜백 URL 업데이트
 
 ## 페이지 구성
 
@@ -252,6 +280,18 @@ docker run -p 3000:3000 vibe-saas
 | 프로 | $49/월 | 무제한 | 20명 |
 | 엔터프라이즈 | $199/월 | 무제한 | 무제한 |
 
+## Supabase vs Prisma 비교
+
+이 스타터 킷은 Supabase를 사용합니다:
+
+| 기능 | Supabase | Prisma |
+|------|----------|--------|
+| 호스팅 | 관리형 | 셀프 호스팅 필요 |
+| 인증 | 내장 | 별도 설정 필요 |
+| 보안 | RLS | 애플리케이션 수준 |
+| 실시간 | 내장 | 추가 구현 필요 |
+| 비용 | 무료 티어 관대 | DB 호스팅 별도 |
+
 ## 기여하기
 
 기여를 환영합니다! PR을 제출하기 전에 기여 가이드라인을 읽어주세요.
@@ -262,10 +302,10 @@ MIT 라이선스 - 자유롭게 프로젝트에 사용하세요.
 
 ## 지원
 
-- [문서](https://docs.example.com)
 - [GitHub Issues](https://github.com/your-repo/issues)
-- [Discord 커뮤니티](https://discord.gg/example)
+- [Supabase 문서](https://supabase.com/docs)
+- [Next.js 문서](https://nextjs.org/docs)
 
 ---
 
-Next.js, TypeScript, 그리고 최신 웹 기술로 만들었습니다.
+Next.js, TypeScript, Supabase, 그리고 최신 웹 기술로 만들었습니다.

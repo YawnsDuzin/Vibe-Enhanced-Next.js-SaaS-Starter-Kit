@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,8 +23,8 @@ import { toast } from 'sonner';
 import { Sparkles, Github, Mail } from 'lucide-react';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('올바른 이메일을 입력하세요'),
+  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다'),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -32,7 +32,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -43,25 +43,26 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const supabase = createClient();
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      const result = await signIn('credentials', {
+      const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
-        redirect: false,
       });
 
-      if (result?.error) {
-        toast.error('Invalid email or password');
+      if (error) {
+        toast.error(error.message || '로그인에 실패했습니다');
         return;
       }
 
-      toast.success('Welcome back!');
-      router.push(callbackUrl);
+      toast.success('환영합니다!');
+      router.push(redirectTo);
       router.refresh();
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -70,9 +71,19 @@ export default function LoginPage() {
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     setIsLoading(true);
     try {
-      await signIn(provider, { callbackUrl });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || '로그인에 실패했습니다');
+        setIsLoading(false);
+      }
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('오류가 발생했습니다. 다시 시도해주세요.');
       setIsLoading(false);
     }
   };
@@ -86,9 +97,9 @@ export default function LoginPage() {
               <Sparkles className="h-6 w-6" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardTitle className="text-2xl">다시 오신 것을 환영합니다</CardTitle>
           <CardDescription>
-            Sign in to your account to continue
+            계정에 로그인하여 계속하세요
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -135,7 +146,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground">
-                Or continue with
+                또는 이메일로 계속
               </span>
             </div>
           </div>
@@ -143,7 +154,7 @@ export default function LoginPage() {
           {/* Email/Password Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">이메일</Label>
               <Input
                 id="email"
                 type="email"
@@ -158,18 +169,18 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">비밀번호</Label>
                 <Link
                   href="/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
-                  Forgot password?
+                  비밀번호를 잊으셨나요?
                 </Link>
               </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="비밀번호를 입력하세요"
                 error={!!errors.password}
                 {...register('password')}
               />
@@ -180,15 +191,15 @@ export default function LoginPage() {
               )}
             </div>
             <Button type="submit" className="w-full" loading={isLoading}>
-              Sign In
+              로그인
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            계정이 없으신가요?{' '}
             <Link href="/register" className="text-primary hover:underline">
-              Sign up
+              회원가입
             </Link>
           </p>
         </CardFooter>

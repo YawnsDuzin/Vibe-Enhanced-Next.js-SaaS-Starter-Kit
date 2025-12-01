@@ -1,31 +1,28 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    const supabase = await createClient();
 
-    const prompt = await db.prompt.findFirst({
-      where: {
-        id,
-        OR: [
-          { isPublic: true },
-          { isSystem: true },
-          { userId: session.user.id },
-        ],
-      },
-    });
+    const { data: prompt, error } = await supabase
+      .from('prompts')
+      .select('*')
+      .eq('id', id)
+      .or(`is_public.eq.true,is_system.eq.true,user_id.eq.${user.id}`)
+      .single();
 
-    if (!prompt) {
+    if (error || !prompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
     }
 
@@ -44,38 +41,50 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await req.json();
+    const supabase = await createClient();
 
-    const prompt = await db.prompt.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
-      },
-    });
+    // First check if the prompt belongs to the user
+    const { data: existingPrompt } = await supabase
+      .from('prompts')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
 
-    if (!prompt) {
+    if (!existingPrompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
     }
 
-    const updated = await db.prompt.update({
-      where: { id },
-      data: {
+    const { data: prompt, error } = await supabase
+      .from('prompts')
+      .update({
         name: body.name,
         description: body.description,
         content: body.content,
         category: body.category,
         variables: body.variables,
-        isPublic: body.isPublic,
-      },
-    });
+        is_public: body.isPublic,
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updated);
+    if (error) {
+      console.error('Failed to update prompt:', error);
+      return NextResponse.json(
+        { error: 'Failed to update prompt' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(prompt);
   } catch (error) {
     console.error('Failed to update prompt:', error);
     return NextResponse.json(
@@ -90,25 +99,38 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    const supabase = await createClient();
 
-    const prompt = await db.prompt.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
-      },
-    });
+    // First check if the prompt belongs to the user
+    const { data: existingPrompt } = await supabase
+      .from('prompts')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
 
-    if (!prompt) {
+    if (!existingPrompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
     }
 
-    await db.prompt.delete({ where: { id } });
+    const { error } = await supabase
+      .from('prompts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to delete prompt:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete prompt' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

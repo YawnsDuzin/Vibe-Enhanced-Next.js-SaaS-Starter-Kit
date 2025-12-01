@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const createPromptSchema = z.object({
@@ -22,8 +22,8 @@ const createPromptSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,31 +31,33 @@ export async function GET(req: Request) {
     const category = searchParams.get('category');
     const type = searchParams.get('type'); // 'system', 'user', 'public'
 
-    const where: Record<string, unknown> = {};
+    const supabase = await createClient();
+    let query = supabase.from('prompts').select('*');
 
     if (category) {
-      where.category = category;
+      query = query.eq('category', category);
     }
 
     if (type === 'system') {
-      where.isSystem = true;
+      query = query.eq('is_system', true);
     } else if (type === 'user') {
-      where.userId = session.user.id;
+      query = query.eq('user_id', user.id);
     } else if (type === 'public') {
-      where.isPublic = true;
+      query = query.eq('is_public', true);
     } else {
       // Default: show user's prompts and public/system prompts
-      where.OR = [
-        { isPublic: true },
-        { isSystem: true },
-        { userId: session.user.id },
-      ];
+      query = query.or(`is_public.eq.true,is_system.eq.true,user_id.eq.${user.id}`);
     }
 
-    const prompts = await db.prompt.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-    });
+    const { data: prompts, error } = await query.order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch prompts:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch prompts' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(prompts);
   } catch (error) {
@@ -69,25 +71,36 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
     const validatedData = createPromptSchema.parse(body);
 
-    const prompt = await db.prompt.create({
-      data: {
+    const supabase = await createClient();
+    const { data: prompt, error } = await supabase
+      .from('prompts')
+      .insert({
         name: validatedData.name,
         description: validatedData.description,
         content: validatedData.content,
         category: validatedData.category,
         variables: validatedData.variables || [],
-        isPublic: validatedData.isPublic || false,
-        userId: session.user.id,
-      },
-    });
+        is_public: validatedData.isPublic || false,
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create prompt:', error);
+      return NextResponse.json(
+        { error: 'Failed to create prompt' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(prompt);
   } catch (error) {

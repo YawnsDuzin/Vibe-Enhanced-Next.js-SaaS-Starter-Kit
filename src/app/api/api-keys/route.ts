@@ -1,21 +1,41 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { generateId } from '@/lib/utils';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const apiKeys = await db.apiKey.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: 'desc' },
-    });
+    const supabase = await createClient();
+    const { data: apiKeys, error } = await supabase
+      .from('api_keys')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
 
-    return NextResponse.json(apiKeys);
+    if (error) {
+      console.error('Failed to fetch API keys:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch API keys' },
+        { status: 500 }
+      );
+    }
+
+    // Transform to camelCase for frontend
+    const transformedKeys = apiKeys.map((key) => ({
+      id: key.id,
+      name: key.name,
+      key: key.key,
+      lastUsedAt: key.last_used_at,
+      expiresAt: key.expires_at,
+      createdAt: key.created_at,
+    }));
+
+    return NextResponse.json(transformedKeys);
   } catch (error) {
     console.error('Failed to fetch API keys:', error);
     return NextResponse.json(
@@ -27,8 +47,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -44,15 +64,33 @@ export async function POST(req: Request) {
     // Generate a secure API key
     const key = `vibe_${generateId(32)}`;
 
-    const apiKey = await db.apiKey.create({
-      data: {
+    const supabase = await createClient();
+    const { data: apiKey, error } = await supabase
+      .from('api_keys')
+      .insert({
         name,
         key,
-        userId: session.user.id,
-      },
-    });
+        user_id: user.id,
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(apiKey);
+    if (error) {
+      console.error('Failed to create API key:', error);
+      return NextResponse.json(
+        { error: 'Failed to create API key' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      id: apiKey.id,
+      name: apiKey.name,
+      key: apiKey.key,
+      lastUsedAt: apiKey.last_used_at,
+      expiresAt: apiKey.expires_at,
+      createdAt: apiKey.created_at,
+    });
   } catch (error) {
     console.error('Failed to create API key:', error);
     return NextResponse.json(

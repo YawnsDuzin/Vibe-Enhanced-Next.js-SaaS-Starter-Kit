@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { createClient } from '@/lib/supabase/client';
 import {
   Card,
   CardContent,
@@ -32,47 +32,71 @@ import { getInitials } from '@/lib/utils';
 import { User, Bell, Shield, Palette, Globe } from 'lucide-react';
 
 const profileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email'),
+  name: z.string().min(2, '이름은 2자 이상이어야 합니다'),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
 
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
 export default function SettingsPage() {
-  const { data: session, update } = useSession();
   const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const supabase = createClient();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: session?.user?.name || '',
-      email: session?.user?.email || '',
-    },
   });
 
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single();
+
+        if (profile) {
+          setUser(profile);
+          reset({ name: profile.name || '' });
+        }
+      }
+    }
+    loadUser();
+  }, [supabase, reset]);
+
   const onSubmit = async (data: ProfileForm) => {
+    if (!user) return;
+
     setLoading(true);
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: data.name })
+        .eq('id', user.id);
 
-      if (!response.ok) {
-        toast.error('Failed to update profile');
+      if (error) {
+        toast.error('프로필 업데이트에 실패했습니다');
         return;
       }
 
-      await update({ name: data.name });
-      toast.success('Profile updated successfully');
+      setUser({ ...user, name: data.name });
+      toast.success('프로필이 업데이트되었습니다');
     } catch {
-      toast.error('Something went wrong');
+      toast.error('오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
@@ -81,9 +105,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">설정</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your account settings and preferences
+          계정 설정 및 환경설정을 관리하세요
         </p>
       </div>
 
@@ -91,45 +115,45 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Profile
+            프로필
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
-            Notifications
+            알림
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            Appearance
+            테마
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            Security
+            보안
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <Card>
             <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
+              <CardTitle>프로필 정보</CardTitle>
               <CardDescription>
-                Update your personal information and how others see you
+                개인 정보와 프로필 설정을 업데이트하세요
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={session?.user?.image || ''} />
+                  <AvatarImage src={user?.avatar_url || ''} />
                   <AvatarFallback className="text-lg">
-                    {getInitials(session?.user?.name || session?.user?.email || 'U')}
+                    {getInitials(user?.name || user?.email || 'U')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <Button variant="outline" size="sm">
-                    Change Avatar
+                    아바타 변경
                   </Button>
                   <p className="text-xs text-muted-foreground mt-2">
-                    JPG, PNG or GIF. Max size 2MB.
+                    JPG, PNG 또는 GIF. 최대 2MB.
                   </p>
                 </div>
               </div>
@@ -140,11 +164,10 @@ export default function SettingsPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name">이름</Label>
                     <Input
                       id="name"
                       {...register('name')}
-                      error={!!errors.name}
                     />
                     {errors.name && (
                       <p className="text-sm text-destructive">
@@ -153,23 +176,17 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">이메일</Label>
                     <Input
                       id="email"
                       type="email"
-                      {...register('email')}
-                      error={!!errors.email}
+                      value={user?.email || ''}
                       disabled
                     />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">
-                        {errors.email.message}
-                      </p>
-                    )}
                   </div>
                 </div>
-                <Button type="submit" loading={loading}>
-                  Save Changes
+                <Button type="submit" disabled={loading}>
+                  {loading ? '저장 중...' : '변경사항 저장'}
                 </Button>
               </form>
             </CardContent>
@@ -179,17 +196,17 @@ export default function SettingsPage() {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
+              <CardTitle>알림 설정</CardTitle>
               <CardDescription>
-                Choose what notifications you want to receive
+                받고 싶은 알림을 선택하세요
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Email Notifications</p>
+                  <p className="font-medium">이메일 알림</p>
                   <p className="text-sm text-muted-foreground">
-                    Receive email updates about your activity
+                    활동에 대한 이메일 업데이트를 받습니다
                   </p>
                 </div>
                 <Switch defaultChecked />
@@ -197,9 +214,9 @@ export default function SettingsPage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Marketing Emails</p>
+                  <p className="font-medium">마케팅 이메일</p>
                   <p className="text-sm text-muted-foreground">
-                    Receive tips, updates, and offers
+                    팁, 업데이트 및 제안을 받습니다
                   </p>
                 </div>
                 <Switch />
@@ -207,9 +224,9 @@ export default function SettingsPage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Security Alerts</p>
+                  <p className="font-medium">보안 알림</p>
                   <p className="text-sm text-muted-foreground">
-                    Get notified about security events
+                    보안 이벤트에 대한 알림을 받습니다
                   </p>
                 </div>
                 <Switch defaultChecked />
@@ -221,41 +238,41 @@ export default function SettingsPage() {
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
-              <CardTitle>Appearance</CardTitle>
+              <CardTitle>테마</CardTitle>
               <CardDescription>
-                Customize how the application looks
+                앱의 외관을 사용자 지정하세요
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label>Theme</Label>
+                <Label>테마</Label>
                 <Select value={theme} onValueChange={setTheme}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select theme" />
+                    <SelectValue placeholder="테마 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="light">라이트</SelectItem>
+                    <SelectItem value="dark">다크</SelectItem>
+                    <SelectItem value="system">시스템</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Select your preferred color theme
+                  원하는 색상 테마를 선택하세요
                 </p>
               </div>
               <Separator />
               <div className="space-y-2">
-                <Label>Language</Label>
-                <Select defaultValue="en">
+                <Label>언어</Label>
+                <Select defaultValue="ko">
                   <SelectTrigger className="w-[200px]">
                     <Globe className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Select language" />
+                    <SelectValue placeholder="언어 선택" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="ko">한국어</SelectItem>
                     <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="ko">Korean</SelectItem>
-                    <SelectItem value="ja">Japanese</SelectItem>
-                    <SelectItem value="zh">Chinese</SelectItem>
+                    <SelectItem value="ja">日本語</SelectItem>
+                    <SelectItem value="zh">中文</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -266,33 +283,33 @@ export default function SettingsPage() {
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Security</CardTitle>
+              <CardTitle>보안</CardTitle>
               <CardDescription>
-                Manage your account security settings
+                계정 보안 설정을 관리하세요
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h4 className="font-medium mb-2">Password</h4>
-                <Button variant="outline">Change Password</Button>
+                <h4 className="font-medium mb-2">비밀번호</h4>
+                <Button variant="outline">비밀번호 변경</Button>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium mb-2">Two-Factor Authentication</h4>
+                <h4 className="font-medium mb-2">2단계 인증</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Add an extra layer of security to your account
+                  계정에 추가 보안 레이어를 추가하세요
                 </p>
-                <Button variant="outline">Enable 2FA</Button>
+                <Button variant="outline">2FA 활성화</Button>
               </div>
               <Separator />
               <div>
                 <h4 className="font-medium mb-2 text-destructive">
-                  Danger Zone
+                  위험 영역
                 </h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Permanently delete your account and all data
+                  계정과 모든 데이터를 영구적으로 삭제합니다
                 </p>
-                <Button variant="destructive">Delete Account</Button>
+                <Button variant="destructive">계정 삭제</Button>
               </div>
             </CardContent>
           </Card>

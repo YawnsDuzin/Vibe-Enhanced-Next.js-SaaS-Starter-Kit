@@ -1,5 +1,5 @@
-import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import {
   Card,
   CardContent,
@@ -19,81 +19,86 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import Link from 'next/link';
-import { formatNumber, formatCompactNumber } from '@/lib/utils';
+import { formatCompactNumber } from '@/lib/utils';
 import { PLANS } from '@/lib/stripe';
 
 async function getDashboardData(userId: string) {
-  const [subscription, promptCount, teamCount, recentPrompts] =
+  const supabase = await createClient();
+
+  const [subscriptionResult, promptCountResult, teamCountResult, recentPromptsResult] =
     await Promise.all([
-      db.subscription.findFirst({
-        where: { userId },
-      }),
-      db.promptUsage.count({
-        where: { userId },
-      }),
-      db.teamMember.count({
-        where: { userId },
-      }),
-      db.promptUsage.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        include: {
-          prompt: {
-            select: {
-              name: true,
-              category: true,
-            },
-          },
-        },
-      }),
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('prompt_usages')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      supabase
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      supabase
+        .from('prompt_usages')
+        .select(`
+          *,
+          prompt:prompts (
+            name,
+            category
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(5),
     ]);
 
   return {
-    subscription,
-    promptCount,
-    teamCount,
-    recentPrompts,
+    subscription: subscriptionResult.data,
+    promptCount: promptCountResult.count || 0,
+    teamCount: teamCountResult.count || 0,
+    recentPrompts: recentPromptsResult.data || [],
   };
 }
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user) return null;
+  const user = await getUser();
+  if (!user) return null;
 
   const { subscription, promptCount, teamCount, recentPrompts } =
-    await getDashboardData(session.user.id);
+    await getDashboardData(user.id);
 
   const plan = subscription?.plan || 'FREE';
-  const planDetails = PLANS[plan];
+  const planDetails = PLANS[plan as keyof typeof PLANS];
   const promptsUsedToday = 0; // This would come from actual tracking
-  const promptLimit = planDetails.limits.promptsPerDay;
+  const promptLimit = planDetails?.limits?.promptsPerDay || 5;
   const promptPercentage =
     promptLimit === -1 ? 0 : (promptsUsedToday / promptLimit) * 100;
 
   const stats = [
     {
-      title: 'Total Prompts Used',
+      title: '총 프롬프트 사용',
       value: formatCompactNumber(promptCount),
       change: '+12%',
       trend: 'up',
       icon: Sparkles,
     },
     {
-      title: 'Teams',
+      title: '팀',
       value: teamCount.toString(),
       change: '+2',
       trend: 'up',
       icon: Users,
     },
     {
-      title: 'Current Plan',
-      value: planDetails.name,
-      badge: plan === 'FREE' ? 'Free' : 'Active',
+      title: '현재 플랜',
+      value: planDetails?.name || 'Free',
+      badge: plan === 'FREE' ? '무료' : '활성',
       icon: CreditCard,
     },
     {
-      title: 'API Usage',
+      title: 'API 사용량',
       value: '2,431',
       change: '-5%',
       trend: 'down',
@@ -106,10 +111,10 @@ export default async function DashboardPage() {
       {/* Welcome Section */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {session.user.name?.split(' ')[0] || 'there'}!
+          환영합니다, {user.name?.split(' ')[0] || '사용자'}님!
         </h1>
         <p className="text-muted-foreground mt-2">
-          Here&apos;s what&apos;s happening with your account today.
+          오늘의 계정 현황을 확인하세요.
         </p>
       </div>
 
@@ -143,7 +148,7 @@ export default async function DashboardPage() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3" />
                   )}
-                  {stat.change} from last month
+                  {stat.change} 지난 달 대비
                 </p>
               )}
             </CardContent>
@@ -155,11 +160,11 @@ export default async function DashboardPage() {
         {/* Usage Card */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Daily Prompt Usage</CardTitle>
+            <CardTitle>일일 프롬프트 사용량</CardTitle>
             <CardDescription>
               {promptLimit === -1
-                ? 'Unlimited prompts on your plan'
-                : `${promptsUsedToday} of ${promptLimit} prompts used today`}
+                ? '무제한 프롬프트를 사용할 수 있습니다'
+                : `오늘 ${promptsUsedToday} / ${promptLimit} 프롬프트 사용`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -167,20 +172,20 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <Progress value={promptPercentage} />
                 <p className="text-sm text-muted-foreground">
-                  {promptLimit - promptsUsedToday} prompts remaining
+                  {promptLimit - promptsUsedToday}개 프롬프트 남음
                 </p>
               </div>
             )}
             {promptLimit === -1 && (
               <p className="text-sm text-muted-foreground">
-                You have unlimited prompts with your {planDetails.name} plan.
+                {planDetails?.name} 플랜에서는 무제한 프롬프트를 사용할 수 있습니다.
               </p>
             )}
             <div className="mt-4">
               <Button asChild>
                 <Link href="/dashboard/prompts">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Use AI Prompts
+                  AI 프롬프트 사용하기
                 </Link>
               </Button>
             </div>
@@ -190,31 +195,31 @@ export default async function DashboardPage() {
         {/* Recent Activity */}
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Your latest prompt usage</CardDescription>
+            <CardTitle>최근 활동</CardTitle>
+            <CardDescription>최근 프롬프트 사용 기록</CardDescription>
           </CardHeader>
           <CardContent>
             {recentPrompts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No recent activity. Start using prompts!
+                최근 활동이 없습니다. 프롬프트를 사용해보세요!
               </p>
             ) : (
               <div className="space-y-4">
-                {recentPrompts.map((usage) => (
+                {recentPrompts.map((usage: any) => (
                   <div
                     key={usage.id}
                     className="flex items-center justify-between"
                   >
                     <div>
                       <p className="text-sm font-medium">
-                        {usage.prompt.name}
+                        {usage.prompt?.name || '프롬프트'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {usage.prompt.category}
+                        {usage.prompt?.category || 'GENERAL'}
                       </p>
                     </div>
                     <Badge variant="outline">
-                      {usage.tokens || 0} tokens
+                      {usage.tokens || 0} 토큰
                     </Badge>
                   </div>
                 ))}
@@ -227,9 +232,9 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>빠른 작업</CardTitle>
           <CardDescription>
-            Common tasks and shortcuts to get things done faster
+            자주 사용하는 작업과 단축키
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -238,7 +243,7 @@ export default async function DashboardPage() {
               <Link href="/dashboard/prompts/new">
                 <div className="flex flex-col items-center gap-2">
                   <Sparkles className="h-6 w-6" />
-                  <span>Create Prompt</span>
+                  <span>프롬프트 생성</span>
                 </div>
               </Link>
             </Button>
@@ -246,7 +251,7 @@ export default async function DashboardPage() {
               <Link href="/dashboard/team/invite">
                 <div className="flex flex-col items-center gap-2">
                   <Users className="h-6 w-6" />
-                  <span>Invite Team</span>
+                  <span>팀 초대</span>
                 </div>
               </Link>
             </Button>
@@ -254,7 +259,7 @@ export default async function DashboardPage() {
               <Link href="/dashboard/api-keys">
                 <div className="flex flex-col items-center gap-2">
                   <TrendingUp className="h-6 w-6" />
-                  <span>API Keys</span>
+                  <span>API 키</span>
                 </div>
               </Link>
             </Button>
@@ -262,7 +267,7 @@ export default async function DashboardPage() {
               <Link href="/dashboard/billing">
                 <div className="flex flex-col items-center gap-2">
                   <CreditCard className="h-6 w-6" />
-                  <span>Upgrade Plan</span>
+                  <span>플랜 업그레이드</span>
                 </div>
               </Link>
             </Button>
