@@ -21,7 +21,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Sparkles, Github, Mail, User } from 'lucide-react';
+import { Sparkles, Mail, User } from 'lucide-react';
 
 const registerSchema = z
   .object({
@@ -40,9 +40,50 @@ const registerSchema = z
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
+// OAuth Provider Icons
+const GoogleIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+);
+
+const KakaoIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <path
+      fill="#000000"
+      d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11l-4.408 2.883c-.501.265-.678.236-.472-.413l.892-3.678c-2.88-1.46-4.785-3.99-4.785-6.866C1.5 6.665 6.201 3 12 3z"
+    />
+  </svg>
+);
+
+const NaverIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <path
+      fill="#FFFFFF"
+      d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"
+    />
+  </svg>
+);
+
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -90,8 +131,8 @@ export default function RegisterPage() {
     }
   };
 
-  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
-    setIsLoading(true);
+  const handleOAuthSignIn = async (provider: 'google' | 'kakao') => {
+    setLoadingProvider(provider);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -102,12 +143,18 @@ export default function RegisterPage() {
 
       if (error) {
         toast.error(error.message || '로그인에 실패했습니다');
-        setIsLoading(false);
+        setLoadingProvider(null);
       }
     } catch {
       toast.error('오류가 발생했습니다. 다시 시도해주세요.');
-      setIsLoading(false);
+      setLoadingProvider(null);
     }
+  };
+
+  const handleNaverSignIn = () => {
+    setLoadingProvider('naver');
+    // Redirect to our Naver OAuth API route
+    window.location.href = `/api/auth/naver?next=/dashboard`;
   };
 
   return (
@@ -126,39 +173,60 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* OAuth Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3">
             <Button
               variant="outline"
+              className="w-full h-11"
               onClick={() => handleOAuthSignIn('google')}
-              disabled={isLoading}
+              disabled={loadingProvider !== null || isLoading}
             >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Google
+              {loadingProvider === 'google' ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  연결 중...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <GoogleIcon />
+                  Google로 계속하기
+                </span>
+              )}
             </Button>
             <Button
               variant="outline"
-              onClick={() => handleOAuthSignIn('github')}
-              disabled={isLoading}
+              className="w-full h-11 bg-[#FEE500] hover:bg-[#FDD835] text-black border-[#FEE500] hover:border-[#FDD835]"
+              onClick={() => handleOAuthSignIn('kakao')}
+              disabled={loadingProvider !== null || isLoading}
             >
-              <Github className="mr-2 h-4 w-4" />
-              GitHub
+              {loadingProvider === 'kakao' ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  연결 중...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <KakaoIcon />
+                  카카오로 계속하기
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-11 bg-[#03C75A] hover:bg-[#02b351] text-white border-[#03C75A] hover:border-[#02b351]"
+              onClick={handleNaverSignIn}
+              disabled={loadingProvider !== null || isLoading}
+            >
+              {loadingProvider === 'naver' ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  연결 중...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <NaverIcon />
+                  네이버로 계속하기
+                </span>
+              )}
             </Button>
           </div>
 
@@ -258,7 +326,7 @@ export default function RegisterPage() {
             {errors.terms && (
               <p className="text-sm text-destructive">{errors.terms.message}</p>
             )}
-            <Button type="submit" className="w-full" loading={isLoading}>
+            <Button type="submit" className="w-full" loading={isLoading} disabled={loadingProvider !== null}>
               회원가입
             </Button>
           </form>
