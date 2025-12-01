@@ -19,8 +19,12 @@
 - 자동 세션 갱신
 
 ### 결제 및 구독 (Billing & Subscriptions)
-- Stripe 완전 통합
+- **리전 기반 결제 시스템**
+  - 한국: 토스페이먼츠 (신용카드, 체크카드, 계좌이체)
+  - 해외: Stripe (모든 주요 결제 수단)
+- 자동 리전 감지 (IP, 브라우저 언어, 타임존)
 - 다양한 요금제 (무료, 스타터, 프로, 엔터프라이즈)
+- 다중 통화 지원 (KRW, USD)
 - 구독 관리를 위한 고객 포털
 - 구독 이벤트 웹훅 처리
 - 인보이스 추적
@@ -68,7 +72,7 @@
 | **UI 컴포넌트** | shadcn/ui + Radix UI |
 | **데이터베이스** | Supabase (PostgreSQL) |
 | **인증** | Supabase Auth |
-| **결제** | Stripe |
+| **결제** | Stripe + 토스페이먼츠 |
 | **상태 관리** | Zustand + React Query |
 | **폼** | React Hook Form + Zod |
 | **이메일** | Resend |
@@ -290,13 +294,18 @@ Vercel 대시보드 → Project Settings → Environment Variables:
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key |
-| `STRIPE_SECRET_KEY` | ✅ | Stripe Secret Key |
+| `STRIPE_SECRET_KEY` | ✅ | Stripe Secret Key (해외 결제) |
 | `STRIPE_PUBLISHABLE_KEY` | ✅ | Stripe Publishable Key |
 | `STRIPE_WEBHOOK_SECRET` | ✅ | Stripe Webhook Secret |
 | `STRIPE_PRICE_ID_STARTER` | ✅ | Starter 플랜 Price ID |
 | `STRIPE_PRICE_ID_PRO` | ✅ | Pro 플랜 Price ID |
 | `STRIPE_PRICE_ID_ENTERPRISE` | ✅ | Enterprise 플랜 Price ID |
+| `TOSS_CLIENT_KEY` | ⚠️ | 토스페이먼츠 Client Key (한국 결제) |
+| `TOSS_SECRET_KEY` | ⚠️ | 토스페이먼츠 Secret Key |
+| `TOSS_WEBHOOK_SECRET` | ⚠️ | 토스페이먼츠 Webhook Secret |
 | `OPENAI_API_KEY` | ❌ | OpenAI API 키 (AI 기능용) |
+
+> ⚠️ 한국 결제를 지원하려면 토스페이먼츠 키가 필요합니다.
 
 #### 5단계: 배포 후 설정
 
@@ -313,12 +322,18 @@ Vercel 대시보드 → Project Settings → Environment Variables:
 ### 배포 체크리스트
 
 - [ ] Supabase 프로젝트 생성 및 스키마 적용
+  - [ ] `00001_initial_schema.sql` 실행
+  - [ ] `00002_payment_providers.sql` 실행
 - [ ] Supabase OAuth 설정 (Google, GitHub)
-- [ ] Stripe 상품/가격 생성
-- [ ] Stripe Webhook 설정
+- [ ] Stripe 상품/가격 생성 (해외 결제)
+- [ ] Stripe Webhook 설정 (`/api/webhooks/stripe`)
+- [ ] 토스페이먼츠 설정 (한국 결제)
+  - [ ] 토스페이먼츠 개발자센터 가입
+  - [ ] API 키 발급 및 환경 변수 설정
+  - [ ] Webhook 설정 (`/api/webhooks/toss`)
 - [ ] Vercel 환경 변수 설정
 - [ ] Supabase URL 설정 업데이트
-- [ ] 테스트 결제 진행
+- [ ] 테스트 결제 진행 (Stripe + 토스페이먼츠)
 - [ ] 관리자 계정 설정
 
 ## 페이지 구성
@@ -337,12 +352,16 @@ Vercel 대시보드 → Project Settings → Environment Variables:
 
 ## 요금제 구성
 
-| 플랜 | 가격 | 일일 프롬프트 | 팀원 수 |
-|------|------|--------------|--------|
-| 무료 | $0 | 5개 | 1명 |
-| 스타터 | $19/월 | 100개 | 5명 |
-| 프로 | $49/월 | 무제한 | 20명 |
-| 엔터프라이즈 | $199/월 | 무제한 | 무제한 |
+| 플랜 | 가격 (USD) | 가격 (KRW) | 일일 프롬프트 | 팀원 수 |
+|------|-----------|-----------|--------------|--------|
+| 무료 | $0 | ₩0 | 5개 | 1명 |
+| 스타터 | $19/월 | ₩19,000/월 | 100개 | 5명 |
+| 프로 | $49/월 | ₩49,000/월 | 무제한 | 20명 |
+| 엔터프라이즈 | $199/월 | ₩199,000/월 | 무제한 | 무제한 |
+
+> 결제 시스템은 사용자의 접속 지역에 따라 자동으로 결제 수단을 선택합니다.
+> - 한국: 토스페이먼츠 (KRW)
+> - 해외: Stripe (USD)
 
 ## Supabase vs Prisma 비교
 

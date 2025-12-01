@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { createCheckoutSession, createOrGetCustomer, PLANS } from '@/lib/stripe';
+import {
+  createPaymentSession,
+  detectRegionServer,
+  getPaymentProvider,
+  getPlanPrice,
+  PLANS,
+  type PlanType,
+  type PaymentRegion,
+} from '@/lib/payments';
 import { absoluteUrl } from '@/lib/utils';
-import type { PlanType } from '@/lib/stripe';
 
 export async function POST(req: Request) {
   try {
@@ -14,73 +21,77 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { plan } = body as { plan: PlanType };
+    const { plan, region: clientRegion } = body as { plan: PlanType; region?: PaymentRegion };
 
-    if (!plan || !PLANS[plan] || !PLANS[plan].priceId) {
+    // 플랜 검증
+    if (!plan || !PLANS[plan]) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    // Get or create Stripe customer
-    const customer = await createOrGetCustomer({
-      email: user.email,
-      name: user.name || undefined,
-      userId: user.id,
-    });
+    // 무료 플랜은 결제 불필요
+    if (plan === 'FREE') {
+      return NextResponse.json({ error: 'Free plan does not require payment' }, { status: 400 });
+    }
+
+    // 리전 감지 (클라이언트 제공값 우선, 없으면 서버에서 감지)
+    const region = clientRegion || (await detectRegionServer());
+    const provider = getPaymentProvider(region);
+    const amount = getPlanPrice(plan, region);
 
     const supabase = await createClient();
 
-    // Check if user already has an active subscription with this customer
+    // 이미 활성 구독이 있는지 확인
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
-      .eq('stripe_customer_id', customer.id)
       .eq('status', 'ACTIVE')
       .single();
 
-    if (existingSubscription?.stripe_subscription_id) {
+    if (existingSubscription?.plan !== 'FREE') {
       return NextResponse.json(
-        { error: 'You already have an active subscription. Please manage it from the billing portal.' },
+        { error: '이미 활성화된 구독이 있습니다. 결제 관리에서 변경해주세요.' },
         { status: 400 }
       );
     }
 
-    // Create checkout session
-    const checkoutSession = await createCheckoutSession({
-      customerId: customer.id,
-      priceId: PLANS[plan].priceId!,
+    // 결제 세션 생성
+    const session = await createPaymentSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name || undefined,
+      plan,
+      amount,
       successUrl: absoluteUrl('/dashboard/billing?success=true'),
       cancelUrl: absoluteUrl('/dashboard/billing?canceled=true'),
+      region,
     });
 
-    // Store customer ID if not already stored
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (subscription) {
-      await supabase
-        .from('subscriptions')
-        .update({ stripe_customer_id: customer.id })
-        .eq('user_id', user.id);
-    } else {
-      await supabase
-        .from('subscriptions')
-        .insert({
-          user_id: user.id,
-          stripe_customer_id: customer.id,
-          plan: 'FREE',
-          status: 'ACTIVE',
-        });
+    // 토스페이먼츠의 경우 클라이언트에서 SDK로 결제 진행
+    if (provider === 'toss') {
+      return NextResponse.json({
+        provider: 'toss',
+        clientKey: session.clientKey,
+        orderId: session.orderId,
+        amount: session.amount,
+        orderName: `${PLANS[plan].name} 월간 구독`,
+        customerName: user.name || user.email,
+        customerEmail: user.email,
+        successUrl: absoluteUrl('/api/billing/toss/success'),
+        failUrl: absoluteUrl('/api/billing/toss/fail'),
+        plan,
+      });
     }
 
-    return NextResponse.json({ url: checkoutSession.url });
+    // Stripe의 경우 리다이렉트 URL 반환
+    return NextResponse.json({
+      provider: 'stripe',
+      url: session.url,
+    });
   } catch (error) {
     console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: '결제 세션 생성에 실패했습니다.' },
       { status: 500 }
     );
   }
