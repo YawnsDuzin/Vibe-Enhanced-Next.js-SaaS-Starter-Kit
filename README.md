@@ -1,104 +1,112 @@
-# Vibe-Enhanced Next.js SaaS Starter Kit
+# Vibe-Enhanced Next.js SaaS 스타터 킷
 
-A production-ready, feature-rich SaaS boilerplate built with Next.js 14, TypeScript, and modern best practices. Launch your SaaS product in days, not months.
+프로덕션 준비가 완료된, 기능이 풍부한 SaaS 보일러플레이트입니다. Next.js 14, TypeScript, 그리고 최신 모범 사례를 기반으로 구축되었습니다. 몇 달이 아닌 며칠 만에 SaaS 제품을 출시하세요.
 
-## Features
+## 왜 이 스타터 킷인가?
 
-### Authentication
-- Email/password authentication with NextAuth.js v5
-- OAuth providers (Google, GitHub)
-- Session management with JWT
-- Protected routes and middleware
+- 신규 SaaS 시작 시 이미 **40% 개발 완료**된 상태로 시작
+- **1인 개발자**에게 필수적인 모든 기능 포함
+- 검증된 기술 스택과 모범 사례 적용
 
-### Billing & Subscriptions
-- Stripe integration for subscriptions
-- Multiple pricing tiers (Free, Starter, Pro, Enterprise)
-- Customer portal for subscription management
-- Webhook handling for subscription events
-- Invoice tracking
+## 주요 기능
 
-### Role-Based Access Control (RBAC)
-- User roles (User, Admin, Super Admin)
-- Team roles (Viewer, Member, Admin, Owner)
-- Permission-based access control
-- Middleware for route protection
+### 인증 (Authentication)
+- NextAuth.js v5 기반 이메일/비밀번호 인증
+- OAuth 제공자 지원 (Google, GitHub)
+- JWT 기반 세션 관리
+- 보호된 라우트 및 미들웨어
 
-### Team Management
-- Multi-tenant architecture
-- Team creation and management
-- Team invitations
-- Role-based team permissions
+### 결제 및 구독 (Billing & Subscriptions)
+- Stripe 완전 통합
+- 다양한 요금제 (무료, 스타터, 프로, 엔터프라이즈)
+- 구독 관리를 위한 고객 포털
+- 구독 이벤트 웹훅 처리
+- 인보이스 추적
 
-### AI Prompt Management
-- Pre-built prompt templates
-- Custom prompt creation
-- Variable substitution in prompts
-- OpenAI integration
-- Usage tracking and analytics
+### 역할 기반 접근 제어 (RBAC)
+- 사용자 역할 (일반 사용자, 관리자, 슈퍼 관리자)
+- 팀 역할 (뷰어, 멤버, 관리자, 소유자)
+- 권한 기반 접근 제어
+- 라우트 보호 미들웨어
 
-### UI Components
-- shadcn/ui component system
-- Dark/light mode support
-- Responsive design
-- Accessible components
-- Custom animations
+### 팀 관리 (Team Management)
+- 멀티테넌트 아키텍처
+- 팀 생성 및 관리
+- 팀 초대 기능
+- 역할 기반 팀 권한
 
-### Developer Experience
-- TypeScript throughout
-- Prisma ORM with PostgreSQL
-- ESLint configuration
-- Modular architecture
-- API route handlers
+### AI 프롬프트 관리
+- 사전 구축된 프롬프트 템플릿
+- 커스텀 프롬프트 생성
+- 변수 치환 기능 (예: `{{topic}}`, `{{tone}}`)
+- OpenAI 통합
+- 사용량 추적 및 분석
 
-## Tech Stack
+### UI 컴포넌트
+- shadcn/ui 컴포넌트 시스템
+- 다크/라이트 모드 지원
+- 반응형 디자인
+- 접근성 컴포넌트
+- 커스텀 애니메이션
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui + Radix UI
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js v5
-- **Payments**: Stripe
-- **State Management**: Zustand + React Query
-- **Forms**: React Hook Form + Zod
-- **Email**: Resend
-- **AI**: OpenAI SDK
+### 개발자 경험
+- 전체 TypeScript 적용
+- Prisma ORM + PostgreSQL
+- ESLint 설정
+- 모듈형 아키텍처
+- API 라우트 핸들러
 
-## Getting Started
+## 기술 스택
 
-### Prerequisites
+| 분류 | 기술 |
+|------|------|
+| **프레임워크** | Next.js 14 (App Router) |
+| **언어** | TypeScript |
+| **스타일링** | Tailwind CSS |
+| **UI 컴포넌트** | shadcn/ui + Radix UI |
+| **데이터베이스** | PostgreSQL + Prisma ORM |
+| **인증** | NextAuth.js v5 |
+| **결제** | Stripe |
+| **상태 관리** | Zustand + React Query |
+| **폼** | React Hook Form + Zod |
+| **이메일** | Resend |
+| **AI** | OpenAI SDK |
 
-- Node.js 18.17 or later
-- PostgreSQL database
-- Stripe account
-- (Optional) OpenAI API key
+## 시작하기
 
-### Installation
+### 사전 요구사항
 
-1. Clone the repository:
+- Node.js 18.17 이상
+- PostgreSQL 데이터베이스
+- Stripe 계정
+- (선택) OpenAI API 키
+
+### 설치
+
+1. 저장소 클론:
 ```bash
 git clone https://github.com/your-repo/vibe-saas-starter.git
 cd vibe-saas-starter
 ```
 
-2. Install dependencies:
+2. 의존성 설치:
 ```bash
 npm install
-# or
+# 또는
 pnpm install
 ```
 
-3. Copy the environment file:
+3. 환경 변수 파일 복사:
 ```bash
 cp .env.example .env.local
 ```
 
-4. Configure your environment variables in `.env.local`:
+4. `.env.local`에서 환경 변수 설정:
 ```env
-# Database
+# 데이터베이스
 DATABASE_URL="postgresql://..."
 
-# Auth
+# 인증
 AUTH_SECRET="your-secret"
 AUTH_GOOGLE_ID="..."
 AUTH_GOOGLE_SECRET="..."
@@ -107,103 +115,103 @@ AUTH_GOOGLE_SECRET="..."
 STRIPE_SECRET_KEY="..."
 STRIPE_WEBHOOK_SECRET="..."
 
-# OpenAI (optional)
+# OpenAI (선택)
 OPENAI_API_KEY="..."
 ```
 
-5. Set up the database:
+5. 데이터베이스 설정:
 ```bash
 npm run db:push
 npm run db:seed
 ```
 
-6. Start the development server:
+6. 개발 서버 시작:
 ```bash
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to see your app.
+[http://localhost:3000](http://localhost:3000)에서 앱을 확인하세요.
 
-## Project Structure
+## 프로젝트 구조
 
 ```
 src/
 ├── app/                    # Next.js App Router
-│   ├── (auth)/            # Authentication pages
-│   ├── (dashboard)/       # Dashboard pages
-│   ├── api/               # API routes
-│   └── page.tsx           # Landing page
+│   ├── (auth)/            # 인증 페이지
+│   ├── (dashboard)/       # 대시보드 페이지
+│   ├── api/               # API 라우트
+│   └── page.tsx           # 랜딩 페이지
 ├── components/
-│   ├── layout/            # Layout components
-│   ├── ui/                # UI components
-│   └── providers.tsx      # Context providers
+│   ├── layout/            # 레이아웃 컴포넌트
+│   ├── ui/                # UI 컴포넌트
+│   └── providers.tsx      # 컨텍스트 프로바이더
 ├── lib/
-│   ├── auth.ts            # NextAuth configuration
-│   ├── db.ts              # Prisma client
-│   ├── rbac.ts            # Role-based access control
-│   ├── stripe.ts          # Stripe utilities
-│   └── utils.ts           # Utility functions
-└── middleware.ts          # Route protection
+│   ├── auth.ts            # NextAuth 설정
+│   ├── db.ts              # Prisma 클라이언트
+│   ├── rbac.ts            # 역할 기반 접근 제어
+│   ├── stripe.ts          # Stripe 유틸리티
+│   └── utils.ts           # 유틸리티 함수
+└── middleware.ts          # 라우트 보호
 ```
 
-## Key Features Explained
+## 주요 기능 상세 설명
 
-### Authentication Flow
+### 인증 플로우
 
-The authentication system supports:
-- Email/password registration and login
-- Google and GitHub OAuth
-- Session management with JWT tokens
-- Automatic free subscription creation on signup
+인증 시스템은 다음을 지원합니다:
+- 이메일/비밀번호 회원가입 및 로그인
+- Google 및 GitHub OAuth
+- JWT 토큰 기반 세션 관리
+- 회원가입 시 무료 구독 자동 생성
 
-### Subscription Management
+### 구독 관리
 
-Users can:
-- View available plans on the billing page
-- Subscribe via Stripe Checkout
-- Manage subscriptions through Stripe Customer Portal
-- Webhook handling updates subscription status automatically
+사용자는 다음을 할 수 있습니다:
+- 결제 페이지에서 이용 가능한 요금제 확인
+- Stripe Checkout을 통한 구독
+- Stripe 고객 포털을 통한 구독 관리
+- 웹훅 처리로 구독 상태 자동 업데이트
 
-### AI Prompts
+### AI 프롬프트
 
-The prompt system includes:
-- System-provided prompt templates
-- User-created custom prompts
-- Variable substitution (e.g., `{{topic}}`, `{{tone}}`)
-- Usage tracking and analytics
-- OpenAI integration for generation
+프롬프트 시스템은 다음을 포함합니다:
+- 시스템 제공 프롬프트 템플릿
+- 사용자 커스텀 프롬프트 생성
+- 변수 치환 (예: `{{topic}}`, `{{tone}}`)
+- 사용량 추적 및 분석
+- OpenAI 통합 생성
 
-### RBAC System
+### RBAC 시스템
 
-Permissions are defined in `src/lib/rbac.ts`:
-- Global roles: USER, ADMIN, SUPER_ADMIN
-- Team roles: VIEWER, MEMBER, ADMIN, OWNER
-- Permission checking functions
-- Middleware integration
+권한은 `src/lib/rbac.ts`에 정의되어 있습니다:
+- 전역 역할: USER, ADMIN, SUPER_ADMIN
+- 팀 역할: VIEWER, MEMBER, ADMIN, OWNER
+- 권한 확인 함수
+- 미들웨어 통합
 
-## Available Scripts
+## 사용 가능한 스크립트
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run type-check   # Run TypeScript checks
-npm run db:generate  # Generate Prisma client
-npm run db:push      # Push schema to database
-npm run db:migrate   # Run migrations
-npm run db:seed      # Seed the database
-npm run db:studio    # Open Prisma Studio
+npm run dev          # 개발 서버 시작
+npm run build        # 프로덕션 빌드
+npm run start        # 프로덕션 서버 시작
+npm run lint         # ESLint 실행
+npm run type-check   # TypeScript 타입 검사
+npm run db:generate  # Prisma 클라이언트 생성
+npm run db:push      # 스키마를 데이터베이스에 푸시
+npm run db:migrate   # 마이그레이션 실행
+npm run db:seed      # 데이터베이스 시딩
+npm run db:studio    # Prisma Studio 열기
 ```
 
-## Deployment
+## 배포
 
-### Vercel (Recommended)
+### Vercel (권장)
 
-1. Push your code to GitHub
-2. Import the project in Vercel
-3. Add environment variables
-4. Deploy!
+1. GitHub에 코드 푸시
+2. Vercel에서 프로젝트 임포트
+3. 환경 변수 추가
+4. 배포!
 
 ### Docker
 
@@ -212,27 +220,52 @@ docker build -t vibe-saas .
 docker run -p 3000:3000 vibe-saas
 ```
 
-## Demo Credentials
+## 데모 계정
 
-After seeding the database:
+데이터베이스 시딩 후:
 
-- **Admin**: admin@example.com / admin123
-- **Demo User**: demo@example.com / demo123
+| 역할 | 이메일 | 비밀번호 |
+|------|--------|----------|
+| 관리자 | admin@example.com | admin123 |
+| 데모 사용자 | demo@example.com | demo123 |
 
-## Contributing
+## 페이지 구성
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+| 경로 | 설명 |
+|------|------|
+| `/` | 마케팅 랜딩 페이지 |
+| `/login` | 로그인 페이지 |
+| `/register` | 회원가입 페이지 |
+| `/dashboard` | 메인 대시보드 |
+| `/dashboard/prompts` | AI 프롬프트 관리 |
+| `/dashboard/billing` | 구독 및 결제 |
+| `/dashboard/team` | 팀 관리 |
+| `/dashboard/settings` | 사용자 설정 |
+| `/dashboard/api-keys` | API 키 관리 |
 
-## License
+## 요금제 구성
 
-MIT License - feel free to use this for your own projects.
+| 플랜 | 가격 | 일일 프롬프트 | 팀원 수 |
+|------|------|--------------|--------|
+| 무료 | $0 | 5개 | 1명 |
+| 스타터 | $19/월 | 100개 | 5명 |
+| 프로 | $49/월 | 무제한 | 20명 |
+| 엔터프라이즈 | $199/월 | 무제한 | 무제한 |
 
-## Support
+## 기여하기
 
-- [Documentation](https://docs.example.com)
+기여를 환영합니다! PR을 제출하기 전에 기여 가이드라인을 읽어주세요.
+
+## 라이선스
+
+MIT 라이선스 - 자유롭게 프로젝트에 사용하세요.
+
+## 지원
+
+- [문서](https://docs.example.com)
 - [GitHub Issues](https://github.com/your-repo/issues)
-- [Discord Community](https://discord.gg/example)
+- [Discord 커뮤니티](https://discord.gg/example)
 
 ---
 
-Built with love using Next.js, TypeScript, and modern web technologies.
+Next.js, TypeScript, 그리고 최신 웹 기술로 만들었습니다.
